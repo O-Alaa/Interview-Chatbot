@@ -69,6 +69,10 @@ if not st.session_state.setup_complete:
         placeholder="List your skills"
     )
 
+    st.write(f"**Your Name**: {st.session_state['name']}")
+    st.write(f"**Your Experience**: {st.session_state['experience']}")
+    st.write(f"**Your Skills**: {st.session_state['skills']}")
+
     st.subheader("Company and Position", divider="rainbow")
 
     if "level" not in st.session_state:
@@ -123,46 +127,38 @@ if (
     and not st.session_state.chat_complete
 ):
 
-    # Initializing the OpenAI client
+    # The original first interview prompt, with only the counter added
+    st.info(
+        f"[1/{MAX_QUESTIONS}] Start by introducing yourself.",
+        icon="🙌"
+    )
+
+    # Initializing the OpenAI client using the API key from Streamlit's secrets
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-    # Setting up the OpenAI model
+    # Setting up the OpenAI model in session state if it is not already defined
     if "openai_model" not in st.session_state:
         st.session_state["openai_model"] = "gpt-4o"
 
-    # Initializing the system prompt and first question
+    # Original system prompt — model behavior is unchanged
     if not st.session_state.messages:
         st.session_state.messages = [
             {
                 "role": "system",
                 "content": (
-                    f"You are an HR executive interviewing a candidate "
+                    f"You are an HR executive that interviews an interviewee "
                     f"called {st.session_state['name']} with experience "
                     f"{st.session_state['experience']} and skills "
                     f"{st.session_state['skills']}. "
-                    f"You are interviewing the candidate for the position "
+                    f"You should interview him for the position "
                     f"{st.session_state['level']} "
-                    f"{st.session_state['position']} at "
-                    f"{st.session_state['company']}. "
-                    f"The interview contains exactly {MAX_QUESTIONS} questions. "
-                    f"Ask only one question at a time. "
-                    f"Continue directly from the previous candidate answer. "
-                    f"Do not restart or reintroduce the interview. "
-                    f"Do not introduce yourself or provide an interviewer name. "
-                    f"Never use placeholders such as '[Your Name]'. "
-                    f"Respond only with the next interview question. "
-                    f"Do not add question numbers, counters, or the phrase "
-                    f"'One Final Question' because the application adds them."
+                    f"{st.session_state['position']} at the company "
+                    f"{st.session_state['company']}"
                 )
-            },
-            {
-                "role": "assistant",
-                "content": "Start by introducing yourself.",
-                "question_number": 1
             }
         ]
 
-    # Displaying stored messages
+    # Displaying stored messages with their counters
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
@@ -175,7 +171,7 @@ if (
 
                 st.markdown(message["content"])
 
-    # Accepting a maximum of five user answers
+    # Input field for the user to send a new message
     if st.session_state.user_message_count < MAX_QUESTIONS:
 
         if prompt := st.chat_input("Your answer.", max_chars=1000):
@@ -184,7 +180,7 @@ if (
                 st.session_state.user_message_count + 1
             )
 
-            # Appending the user's answer
+            # Appending the user's input with its counter
             st.session_state.messages.append(
                 {
                     "role": "user",
@@ -193,32 +189,18 @@ if (
                 }
             )
 
-            # Displaying the user's answer
+            # Displaying the user's message
             with st.chat_message("user"):
                 st.markdown(
                     f"**[{current_question}/{MAX_QUESTIONS}]**"
                 )
                 st.markdown(prompt)
 
-            st.session_state.user_message_count += 1
+            # The original app generates another model question
+            # only after answers 1 through 4
+            if st.session_state.user_message_count < 4:
 
-            # Generating the next question
-            if (
-                st.session_state.user_message_count
-                < MAX_QUESTIONS
-            ):
-
-                next_question = (
-                    st.session_state.user_message_count + 1
-                )
-
-                api_messages = [
-                    {
-                        "role": message["role"],
-                        "content": message["content"]
-                    }
-                    for message in st.session_state.messages
-                ]
+                next_question = current_question + 1
 
                 with st.chat_message("assistant"):
                     st.markdown(
@@ -230,13 +212,19 @@ if (
 
                     stream = client.chat.completions.create(
                         model=st.session_state["openai_model"],
-                        messages=api_messages,
+                        messages=[
+                            {
+                                "role": message["role"],
+                                "content": message["content"]
+                            }
+                            for message in st.session_state.messages
+                        ],
                         stream=True
                     )
 
                     response = st.write_stream(stream)
 
-                # Add the final-question label only to question five
+                # Store the final-question label so it remains after reruns
                 if next_question == MAX_QUESTIONS:
                     response = (
                         f"**One Final Question**\n\n{response}"
@@ -250,9 +238,10 @@ if (
                     }
                 )
 
-            else:
-                st.session_state.chat_complete = True
-                st.rerun()
+            st.session_state.user_message_count += 1
+
+    if st.session_state.user_message_count >= MAX_QUESTIONS:
+        st.session_state.chat_complete = True
 
 
 if (
@@ -273,40 +262,38 @@ if st.session_state.feedback_shown:
         ]
     )
 
-    # Initialize a new OpenAI client for feedback
+    # Initialize new OpenAI client instance for feedback
     feedback_client = OpenAI(
         api_key=st.secrets["OPENAI_API_KEY"]
     )
 
-    # Generate feedback
-    feedback_completion = (
-        feedback_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a helpful tool that provides "
-                        "feedback on an interviewee's performance. "
-                        "Before the feedback, give a score from 1 to 10. "
-                        "Follow this format:\n"
-                        "Overall Score: // Your score\n"
-                        "Feedback: // Your feedback\n"
-                        "Give only the feedback and do not ask "
-                        "any additional questions."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        "This is the interview you need to evaluate. "
-                        "Keep in mind that you are only a tool and "
-                        "should not engage in conversation:\n"
-                        f"{conversation_history}"
-                    )
-                }
-            ]
-        )
+    # Generate feedback using the original feedback instructions
+    feedback_completion = feedback_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful tool that provides feedback "
+                    "on an interviewee performance. "
+                    "Before the Feedback give a score of 1 to 10. "
+                    "Follow this format:\n"
+                    "Overal Score: //Your score\n"
+                    "Feedback: //Here you put your feedback\n"
+                    "Give only the feedback do not ask any "
+                    "additional questins."
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    "This is the interview you need to evaluate. "
+                    "Keep in mind that you are only a tool. "
+                    "And you shouldn't engage in any converstation: "
+                    f"{conversation_history}"
+                )
+            }
+        ]
     )
 
     st.write(
