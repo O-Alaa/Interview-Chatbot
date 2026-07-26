@@ -97,10 +97,6 @@ AI-Interview-Chatbot/
 ├── README.md
 ├── LICENSE
 ├── requirements.txt
-├── .gitignore
-│
-└── .streamlit/
-    └── secrets.toml
 ```
 
 ## ▶️ Run the Application
