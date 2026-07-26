@@ -137,19 +137,25 @@ if (
             {
                 "role": "system",
                 "content": (
-                    f"You are an HR executive interviewing an interviewee "
-                    f"called {st.session_state['name']} with experience "
-                    f"{st.session_state['experience']} and skills "
-                    f"{st.session_state['skills']}. "
-                    f"You should interview the candidate for the position "
-                    f"{st.session_state['level']} "
-                    f"{st.session_state['position']} at "
-                    f"{st.session_state['company']}. "
-                    f"The interview contains exactly {MAX_QUESTIONS} questions. "
-                    f"Ask only one question at a time. "
-                    f"Do not add question numbers, counters, or the phrase "
-                    f"'One Final Question' because the application adds them."
-                )
+                    "content": (
+                        f"You are an HR executive interviewing a candidate "
+                        f"called {st.session_state['name']} with experience "
+                        f"{st.session_state['experience']} and skills "
+                        f"{st.session_state['skills']}. "
+                        f"You are interviewing the candidate for the position "
+                        f"{st.session_state['level']} "
+                        f"{st.session_state['position']} at "
+                        f"{st.session_state['company']}. "
+                        f"The interview contains exactly {MAX_QUESTIONS} questions. "
+                        f"Ask only one question at a time. "
+                        f"Continue directly from the previous candidate answer. "
+                        f"Do not restart or reintroduce the interview. "
+                        f"Do not introduce yourself or provide an interviewer name. "
+                        f"Never use placeholders such as '[Your Name]'. "
+                        f"Respond only with the next interview question. "
+                        f"Do not add question numbers, counters, or the phrase "
+                        f"'One Final Question' because the application adds them."
+                    )
             },
             {
                 "role": "assistant",
