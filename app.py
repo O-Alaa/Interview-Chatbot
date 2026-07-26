@@ -69,10 +69,6 @@ if not st.session_state.setup_complete:
         placeholder="List your skills"
     )
 
-    st.write(f"**Your Name**: {st.session_state['name']}")
-    st.write(f"**Your Experience**: {st.session_state['experience']}")
-    st.write(f"**Your Skills**: {st.session_state['skills']}")
-
     st.subheader("Company and Position", divider="rainbow")
 
     if "level" not in st.session_state:
